@@ -16,8 +16,7 @@ const corsOptions = {
     'http://localhost:5173',
     'http://localhost:5174',
   ],
-  credentials: true,
-  optionSuccessStatus: 200,
+  credentials: true
 }
 app.use(cors(corsOptions))
 app.use(express.json())
@@ -70,6 +69,18 @@ async function run() {
       })
         .send({ success: true })
     })
+
+    // logout route (clears the cookie)
+    app.post('/logout', (req, res) => {
+      res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+      });
+      res.status(200).send({ message: 'Logged out successfully' });
+    });
+
+
 
     // save or update a user's info in db
     app.post('/user', async (req, res) => {
