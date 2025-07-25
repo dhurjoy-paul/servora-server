@@ -80,8 +80,6 @@ async function run() {
       res.status(200).send({ message: 'Logged out successfully' });
     });
 
-
-
     // save or update a user's info in db
     app.post('/user', async (req, res) => {
       const userData = req.body
@@ -104,6 +102,88 @@ async function run() {
       const result = await usersCollection.insertOne(userData)
       res.send(result)
     })
+
+    // get all services with condition
+    app.get('/services', async (req, res) => {
+      const searchText = req.query.search || '';
+      const providerEmail = req.query.providerEmail;
+
+      let query = {};
+
+      if (searchText) {
+        query.name = { $regex: searchText, $options: 'i' };
+      }
+
+      if (providerEmail) {
+        query.providerEmail = providerEmail;
+      }
+
+      try {
+        const result = await servicesCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error('Error fetching services:', error);
+        res.status(500).send({ message: 'Failed to fetch services' });
+      }
+    });
+
+    // get one service
+    app.get('/services/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await servicesCollection.findOne(query)
+      res.send(result);
+    })
+
+    // post a service
+    app.post('/services', async (req, res) => {
+      const serviceData = req.body;
+      const result = await servicesCollection.insertOne(serviceData);
+      res.send(result);
+    })
+
+    app.patch('/services/:id', async (req, res) => {
+      const id = req.params.id;
+      const updates = req.body;
+
+      try {
+        const result = await servicesCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updates }
+        );
+
+        if (result.modifiedCount === 0) {
+          return res.status(404).send({ message: 'Service not found or no changes made' });
+        }
+
+        res.send({ message: 'Service updated successfully', result });
+      } catch (error) {
+        console.error('Error patching service:', error);
+        res.status(500).send({ message: 'Failed to update service' });
+      }
+    });
+    ;
+
+    app.delete('/services/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await servicesCollection.deleteOne(query)
+      res.send(result);
+    })
+
+    // post a booking
+    app.post('/bookings', async (req, res) => {
+      const bookingData = req.body;
+      const result = await bookingsCollection.insertOne(bookingData);
+      res.send(result);
+    })
+
+
+
+
+
+
+
 
   } finally {
     // 
