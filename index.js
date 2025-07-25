@@ -178,6 +178,25 @@ async function run() {
       res.send(result);
     })
 
+    // Get all bookings for a user by email
+    app.get('/bookings', async (req, res) => {
+      const userEmail = req.query.userEmail;
+
+      if (!userEmail) {
+        return res.status(400).send({ message: "Missing userEmail in query params" });
+      }
+
+      try {
+        const bookings = await bookingsCollection
+          .find({ userEmail })
+          .sort({ createdAt: -1 })
+          .toArray();
+        res.send(bookings);
+      } catch (error) {
+        console.error('Error fetching bookings:', error);
+        res.status(500).send({ message: 'Failed to fetch bookings' });
+      }
+    });
 
 
 
