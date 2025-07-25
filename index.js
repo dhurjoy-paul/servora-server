@@ -135,14 +135,27 @@ async function run() {
       res.send(result);
     })
 
+    // get 6 random services
+    app.get('/services/random/6', async (req, res) => {
+      try {
+        const pipeline = [{ $sample: { size: 6 } }];
+        const result = await servicesCollection.aggregate(pipeline).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error('Error fetching random services:', error);
+        res.status(500).send({ message: 'Failed to fetch random services' });
+      }
+    });
+
     // post a service
-    app.post('/services', async (req, res) => {
+    app.post('/services', verifyToken, async (req, res) => {
       const serviceData = req.body;
       const result = await servicesCollection.insertOne(serviceData);
       res.send(result);
     })
 
-    app.patch('/services/:id', async (req, res) => {
+    // update 
+    app.patch('/services/:id', verifyToken, async (req, res) => {
       const id = req.params.id;
       const updates = req.body;
 
@@ -162,9 +175,9 @@ async function run() {
         res.status(500).send({ message: 'Failed to update service' });
       }
     });
-    ;
 
-    app.delete('/services/:id', async (req, res) => {
+    // delete
+    app.delete('/services/:id', verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await servicesCollection.deleteOne(query)
@@ -172,37 +185,52 @@ async function run() {
     })
 
     // post a booking
-    app.post('/bookings', async (req, res) => {
+    app.post('/bookings', verifyToken, async (req, res) => {
       const bookingData = req.body;
       const result = await bookingsCollection.insertOne(bookingData);
       res.send(result);
     })
 
-    // Get all bookings for a user by email
-    app.get('/bookings', async (req, res) => {
-      const userEmail = req.query.userEmail;
-
-      if (!userEmail) {
-        return res.status(400).send({ message: "Missing userEmail in query params" });
-      }
-
+    // Get all bookings for a specific provider
+    app.get('/bookings', verifyToken, async (req, res) => {
       try {
-        const bookings = await bookingsCollection
-          .find({ userEmail })
-          .sort({ createdAt: -1 })
-          .toArray();
+        const { providerEmail, userEmail } = req.query;
+
+        const query = providerEmail
+          ? { providerEmail }
+          : userEmail
+            ? { userEmail }
+            : {};
+
+        const bookings = await bookingsCollection.find(query).toArray();
         res.send(bookings);
       } catch (error) {
         console.error('Error fetching bookings:', error);
-        res.status(500).send({ message: 'Failed to fetch bookings' });
+        res.status(500).send({ message: 'Internal Server Error' });
       }
     });
 
+    // Update serviceStatus of a booking
+    app.patch('/bookings/:id', verifyToken, async (req, res) => {
+      try {
+        const bookingId = req.params.id;
+        const { serviceStatus } = req.body;
 
+        const result = await bookingsCollection.updateOne(
+          { _id: new ObjectId(bookingId) },
+          { $set: { serviceStatus } }
+        );
 
+        if (result.modifiedCount === 0) {
+          return res.status(404).send({ message: 'Booking not found or already updated' });
+        }
 
-
-
+        res.send({ message: 'Status updated successfully', result });
+      } catch (error) {
+        console.error('Error updating booking status:', error);
+        res.status(500).send({ message: 'Internal Server Error' });
+      }
+    });
 
   } finally {
     // 
