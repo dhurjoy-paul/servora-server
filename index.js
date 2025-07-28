@@ -23,21 +23,18 @@ app.use(express.json())
 app.use(cookieParser())
 
 // jwt token verification middleware
-const verifyToken = async (req, res, next) => {
-  const token = req.cookies?.token
+const verifyToken = (req, res, next) => {
+  const token = req.cookies.token;
 
-  if (!token) {
-    return res.status(401).send({ message: 'unauthorized access' })
-  }
+  if (!token) return res.status(401).send({ message: 'Unauthorized: No token' });
+
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-    if (err) {
-      console.log(err)
-      return res.status(401).send({ message: 'unauthorized access' })
-    }
-    req.user = decoded
-    next()
-  })
-}
+    if (err) return res.status(403).send({ message: 'Forbidden: Invalid token' });
+
+    req.user = decoded;
+    next();
+  });
+};
 
 // MongoDB Setup
 const client = new MongoClient(process.env.MONGODB_URI, {
@@ -66,6 +63,7 @@ async function run() {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+        maxAge: 365 * 24 * 60 * 60 * 1000,
       })
         .send({ success: true })
     })
@@ -191,7 +189,7 @@ async function run() {
       res.send(result);
     })
 
-    // Get all bookings for a specific provider
+    // Get all bookings for a specific email
     app.get('/bookings', verifyToken, async (req, res) => {
       try {
         const { providerEmail, userEmail } = req.query;
