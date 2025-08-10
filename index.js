@@ -101,10 +101,12 @@ async function run() {
       res.send(result)
     })
 
-    // get all services with condition
+    // get all services with condition + sorting
     app.get('/services', async (req, res) => {
       const searchText = req.query.search || '';
       const providerEmail = req.query.providerEmail;
+      const sortBy = req.query.sortBy || '';
+      const order = req.query.order === 'asc' ? 1 : -1;
 
       let query = {};
 
@@ -117,7 +119,15 @@ async function run() {
       }
 
       try {
-        const result = await servicesCollection.find(query).toArray();
+        let cursor = servicesCollection.find(query);
+
+        if (sortBy === 'latest') {
+          cursor = cursor.sort({ createdAt: order });
+        } else if (sortBy === 'price') {
+          cursor = cursor.sort({ price: order });
+        }
+
+        const result = await cursor.toArray();
         res.send(result);
       } catch (error) {
         console.error('Error fetching services:', error);
@@ -134,9 +144,9 @@ async function run() {
     })
 
     // get 6 random services
-    app.get('/services/random/6', async (req, res) => {
+    app.get('/services/random/8', async (req, res) => {
       try {
-        const pipeline = [{ $sample: { size: 6 } }];
+        const pipeline = [{ $sample: { size: 8 } }];
         const result = await servicesCollection.aggregate(pipeline).toArray();
         res.send(result);
       } catch (error) {
